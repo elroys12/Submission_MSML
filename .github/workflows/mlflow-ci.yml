@@ -22,8 +22,7 @@ jobs:
 
       - name: Run MLflow Project
         run: |
-          # Menjalankan MLProject tanpa conda
-          mlflow run MLProject --no-conda
+          mlflow run MLProject --env-manager local
 
       - name: Save Artifacts
         uses: actions/upload-artifact@v4
