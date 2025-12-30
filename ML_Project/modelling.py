@@ -1,62 +1,43 @@
-import argparse
-import os
-import joblib
+import pandas as pd
 import mlflow
 import mlflow.sklearn
-
+import os
+import sys
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-def main(data_dir):
-    X_train = joblib.load(os.path.join(data_dir, "X_train.pkl"))
-    X_test  = joblib.load(os.path.join(data_dir, "X_test.pkl"))
-    y_train = joblib.load(os.path.join(data_dir, "y_train.pkl"))
-    y_test  = joblib.load(os.path.join(data_dir, "y_test.pkl"))
+# 1. LOAD DATA
+# Pastikan folder ini ada di dalam folder MLProject Anda di GitHub
+DATA_DIR = "SpamEmail_preprocessing"
 
-    alpha_list = [0.1, 0.5, 1.0]
-    best_f1 = 0
-    best_model = None
-    best_alpha = None
+print("Memuat data dari CSV...")
+X_train = pd.read_csv(os.path.join(DATA_DIR, "X_train.csv"))
+X_test  = pd.read_csv(os.path.join(DATA_DIR, "X_test.csv"))
+y_train = pd.read_csv(os.path.join(DATA_DIR, "y_train.csv")).values.ravel()
+y_test  = pd.read_csv(os.path.join(DATA_DIR, "y_test.csv")).values.ravel()
 
-    # Ini memastikan semua log masuk ke satu Run ID yang sama
-    with mlflow.start_run(run_name="MultinomialNB_Tuning") as parent_run:
-        mlflow.log_param("model", "MultinomialNB")
+# 2. TRAINING & AUTOLOGGING
+mlflow.sklearn.autolog()
 
-        for alpha in alpha_list:
-            # Nested run untuk menyimpan tiap percobaan alpha
-            with mlflow.start_run(run_name=f"alpha_{alpha}", nested=True):
-                mlflow.log_param("alpha", alpha)
+with mlflow.start_run(run_name="CI_Training_Run"):
+    # Gunakan alpha dari parameter atau default 1.0
+    alpha_param = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
+    
+    model = MultinomialNB(alpha=alpha_param)
+    print(f"Sedang melatih model dengan alpha={alpha_param}...")
+    model.fit(X_train, y_train)
 
-                model = MultinomialNB(alpha=alpha)
-                model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-                y_pred = model.predict(X_test)
-                f1 = f1_score(y_test, y_pred)
+    # Metrik
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
 
-                mlflow.log_metric("f1", f1)
-
-                if f1 > best_f1:
-                    best_f1 = f1
-                    best_model = model
-                    best_alpha = alpha
-
-        # LOG MODEL TERBAIK (Di luar loop alpha, tapi di dalam parent run)
-        if best_model is not None:
-            mlflow.log_param("best_alpha", best_alpha)
-            mlflow.log_metric("best_f1", best_f1)
-            
-            # membuat folder 'best_model' di tab Artifacts
-            mlflow.sklearn.log_model(
-                sk_model=best_model, 
-                artifact_path="best_model",
-                registered_model_name="NB_Classifier_Model"
-            )
-            print(f"Berhasil! Model terbaik (alpha={best_alpha}) telah disimpan.")
-            print(f"Run ID: {parent_run.info.run_id}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, required=True)
-    args = parser.parse_args()
-
-    main(args.data_dir)
+    print("-" * 30)
+    print(f" Accuracy  : {acc:.4f}")
+    print(f" F1-score  : {f1:.4f}")
+    print("-" * 30)
+    
+    # Log manual tambahan jika diperlukan
+    mlflow.log_param("alpha", alpha_param)
+    mlflow.log_metric("accuracy", acc)
