@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5 #
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -22,10 +22,12 @@ jobs:
 
       - name: Run MLflow Project
         run: |
-          mlflow run ./MLProject --env-manager local
+          cd MLProject
+          mlflow run . --env-manager local
 
       - name: Save Artifacts
+        if: always() # Tetap simpan meski ada error untuk cek log
         uses: actions/upload-artifact@v4
         with:
-          name: model-results-run-${{ github.run_number }}
-          path: mlruns/
+          name: model-results
+          path: MLProject/mlruns/
