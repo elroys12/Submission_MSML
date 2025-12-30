@@ -22,7 +22,7 @@ jobs:
 
       - name: Run MLflow Project
         run: |
-          cd MLProject
+          cd ML_Project
           mlflow run . --env-manager local
 
       - name: Save Artifacts
