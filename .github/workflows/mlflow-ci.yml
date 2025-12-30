@@ -1,34 +1,32 @@
-name: MLflow CI Training
+name: MLflow CI Workflow
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
-  train-model:
+  training:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Install MLflow
-      run: |
-        pip install mlflow
+      - name: Install Libraries
+        run: |
+          pip install mlflow scikit-learn pandas
 
-    - name: Run MLflow Project
-      run: |
-        cd ML_Project
-        mlflow run . --env-manager=conda
+      - name: Run MLflow Project
+        run: |
+          # Menjalankan MLProject tanpa conda
+          mlflow run . --no-conda
 
-    - name: Upload MLflow Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mlflow-artifacts
-        path: ML_Project/mlruns
+      - name: Save Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: model-results
+          path: mlruns/

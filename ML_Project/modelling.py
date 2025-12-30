@@ -2,15 +2,19 @@ import pandas as pd
 import mlflow
 import mlflow.sklearn
 import os
-import sys
+import argparse
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score
+
+# --- Tambahkan ini untuk menangkap parameter dari MLProject ---
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_dir", type=str, default="SpamEmail_preprocessing")
+args = parser.parse_args()
+
+DATA_DIR = args.data_dir
 
 # 1. LOAD DATA
-# Pastikan folder ini ada di dalam folder MLProject Anda di GitHub
-DATA_DIR = "SpamEmail_preprocessing"
-
-print("Memuat data dari CSV...")
+print(f"Memuat data dari folder: {DATA_DIR}")
 X_train = pd.read_csv(os.path.join(DATA_DIR, "X_train.csv"))
 X_test  = pd.read_csv(os.path.join(DATA_DIR, "X_test.csv"))
 y_train = pd.read_csv(os.path.join(DATA_DIR, "y_train.csv")).values.ravel()
@@ -19,25 +23,18 @@ y_test  = pd.read_csv(os.path.join(DATA_DIR, "y_test.csv")).values.ravel()
 # 2. TRAINING & AUTOLOGGING
 mlflow.sklearn.autolog()
 
-with mlflow.start_run(run_name="CI_Training_Run"):
-    # Gunakan alpha dari parameter atau default 1.0
-    alpha_param = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
-    
-    model = MultinomialNB(alpha=alpha_param)
-    print(f"Sedang melatih model dengan alpha={alpha_param}...")
+with mlflow.start_run(run_name="MLProject_CI_Run"):
+    model = MultinomialNB()
+    print("Sedang melatih model...")
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
 
-    # Metrik
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
 
-    print("-" * 30)
-    print(f" Accuracy  : {acc:.4f}")
-    print(f" F1-score  : {f1:.4f}")
-    print("-" * 30)
+    print(f"Accuracy: {acc:.4f} | F1-score: {f1:.4f}")
     
-    # Log manual tambahan jika diperlukan
-    mlflow.log_param("alpha", alpha_param)
+    # Log metrik secara manual untuk memastikan tercatat di MLflow
     mlflow.log_metric("accuracy", acc)
+    mlflow.log_metric("f1_score", f1)
